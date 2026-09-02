@@ -1,0 +1,261 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary-blue: #3366FF;
+  --primary-blue-hover: #254EDB;
+  --primary-blue-light: #EFF6FF;
+  --surface-white: #FFFFFF;
+  --bg-page: #F8FAFC;
+  --border-color: #E2E8F0;
+  --text-main: #111827;
+  --text-muted: #64748B;
+  --text-light: #94A3B8;
+
+  --color-green-bg: #F0FDF4;
+  --color-green-border: #BBF7D0;
+  --color-green-text: #16A34A;
+
+  --color-blue-bg: #EFF6FF;
+  --color-blue-border: #BFDBFE;
+  --color-blue-text: #2563EB;
+
+  --color-amber-bg: #FFFBEB;
+  --color-amber-border: #FDE68A;
+  --color-amber-text: #D97706;
+
+  --color-red-bg: #FEF2F2;
+  --color-red-border: #FCA5A5;
+  --color-red-text: #DC2626;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Typography Helpers */
+.title-page {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.title-section {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.text-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Button UI */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background-color: var(--primary-blue);
+  color: #FFFFFF;
+  border-color: var(--primary-blue);
+}
+.btn-primary:hover {
+  background-color: var(--primary-blue-hover);
+  border-color: var(--primary-blue-hover);
+}
+
+.btn-secondary {
+  background-color: #FFFFFF;
+  color: var(--text-main);
+  border-color: var(--border-color);
+}
+.btn-secondary:hover {
+  background-color: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.btn-danger {
+  background-color: #EF4444;
+  color: #FFFFFF;
+}
+.btn-danger:hover {
+  background-color: #DC2626;
+}
+
+.btn-success {
+  background-color: #16A34A;
+  color: #FFFFFF;
+}
+.btn-success:hover {
+  background-color: #15803D;
+}
+
+.btn-sm {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.btn-lg {
+  height: 48px;
+  padding: 0 24px;
+  font-size: 16px;
+}
+
+/* Form inputs */
+.input-field {
+  height: 42px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: #FFFFFF;
+  color: var(--text-main);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-field:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(51, 102, 255, 0.12);
+}
+
+/* Status Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge-green {
+  background-color: var(--color-green-bg);
+  border-color: var(--color-green-border);
+  color: var(--color-green-text);
+}
+
+.badge-blue {
+  background-color: var(--color-blue-bg);
+  border-color: var(--color-blue-border);
+  color: var(--color-blue-text);
+}
+
+.badge-amber {
+  background-color: var(--color-amber-bg);
+  border-color: var(--color-amber-border);
+  color: var(--color-amber-text);
+}
+
+.badge-red {
+  background-color: var(--color-red-bg);
+  border-color: var(--color-red-border);
+  color: var(--color-red-text);
+}
+
+.badge-gray {
+  background-color: #F1F5F9;
+  border-color: #E2E8F0;
+  color: var(--text-muted);
+}
+
+/* Cards & Layout Containers */
+.card-panel {
+  background-color: var(--surface-white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+/* Table styling */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+.data-table th {
+  background-color: #F8FAFC;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.data-table tr:hover td {
+  background-color: #F8FAFC;
+}
+
+/* Thermal Receipt Styling for Print View */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #thermal-receipt, #thermal-receipt * {
+    visibility: visible;
+  }
+  #thermal-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+  }
+}
