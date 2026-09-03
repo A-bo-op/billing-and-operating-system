@@ -504,9 +504,37 @@ export const AppStateProvider = ({ children }) => {
     showToast(`Added dish ${newDish.name}`, 'success');
   };
 
+  const updateDishRecipe = (dishId, recipeLines) => {
+    setDishes(prev =>
+      prev.map(d => {
+        if (d.id !== dishId) return d;
+        return { ...d, recipe: recipeLines, recipeLinked: recipeLines.length > 0 };
+      })
+    );
+    showToast('Recipe saved successfully', 'success');
+  };
+
   // ----------------------------------------------------
   // STAFF ACTIONS
   // ----------------------------------------------------
+  const addStaff = (staffData) => {
+    const newId = `st-${Date.now()}`;
+    const initials = staffData.name
+      .split(' ')
+      .map(w => w[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+    const newStaff = {
+      id: newId,
+      avatar: initials,
+      status: 'On duty',
+      ...staffData,
+    };
+    setStaffList(prev => [...prev, newStaff]);
+    showToast(`Added ${newStaff.name} to staff roster`, 'success');
+  };
+
   const toggleStaffDuty = (staffId) => {
     setStaffList(prev =>
       prev.map(s => {
@@ -584,6 +612,8 @@ export const AppStateProvider = ({ children }) => {
     addPurchase,
     toggleDishAvailability,
     addDish,
+    updateDishRecipe,
+    addStaff,
     toggleStaffDuty,
     voidInvoice,
   };
