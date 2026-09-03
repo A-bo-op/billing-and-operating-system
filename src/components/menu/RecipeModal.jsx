@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { useAppState } from '../../context/AppStateContext';
 
 export const RecipeModal = ({ dish, isOpen, onClose }) => {
-  const { ingredients, showToast } = useAppState();
+  const { ingredients, updateDishRecipe } = useAppState();
+
+  const [recipeLines, setRecipeLines] = useState([]);
+
+  useEffect(() => {
+    if (dish && dish.recipe) {
+      setRecipeLines(dish.recipe);
+    } else if (ingredients.length > 0) {
+      setRecipeLines([
+        { ingredientId: ingredients[0].id, name: ingredients[0].name, quantity: 100, unit: ingredients[0].unit }
+      ]);
+    }
+  }, [dish, ingredients]);
 
   if (!isOpen || !dish) return null;
-
-  const [recipeLines, setRecipeLines] = useState(dish.recipe || [
-    { ingredientId: ingredients[0]?.id || '', name: ingredients[0]?.name || '', quantity: 100, unit: ingredients[0]?.unit || 'g' }
-  ]);
 
   const handleAddLine = () => {
     const first = ingredients[0];
@@ -24,9 +32,7 @@ export const RecipeModal = ({ dish, isOpen, onClose }) => {
   };
 
   const handleSave = () => {
-    dish.recipe = recipeLines;
-    dish.recipeLinked = recipeLines.length > 0;
-    showToast(`Recipe updated for ${dish.name}`, 'success');
+    updateDishRecipe(dish.id, recipeLines);
     onClose();
   };
 

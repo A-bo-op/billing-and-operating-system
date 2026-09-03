@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Users, UserCheck, ShieldCheck, Phone, Clock, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Users, UserCheck, ShieldCheck, Phone, Clock, Plus, Search } from 'lucide-react';
 import { useAppState } from '../../context/AppStateContext';
+import { AddStaffModal } from './AddStaffModal';
 
 export const StaffView = () => {
   const { staffList, toggleStaffDuty, activeUserRole } = useAppState();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState('All');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
 
   const onDutyCount = staffList.filter(s => s.status === 'On duty').length;
@@ -34,11 +36,40 @@ export const StaffView = () => {
             <span>View Permission Matrix</span>
           </button>
 
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
             <Plus size={16} />
             <span>Add Employee</span>
           </button>
         </div>
+      </div>
+
+      {/* Search + Filter Toolbar */}
+      <div className="card-panel" style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={15} color="#64748B" style={{ position: 'absolute', left: '12px', top: '14px' }} />
+          <input
+            type="text"
+            className="input-field"
+            style={{ paddingLeft: '36px' }}
+            placeholder="Search staff by name..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <select
+          className="input-field"
+          style={{ width: '180px' }}
+          value={selectedRole}
+          onChange={e => setSelectedRole(e.target.value)}
+        >
+          <option value="All">All Roles</option>
+          <option value="Cashier">Cashier</option>
+          <option value="Manager">Manager</option>
+          <option value="Head Chef">Head Chef</option>
+          <option value="Kitchen Helper">Kitchen Helper</option>
+          <option value="Waiter">Waiter</option>
+          <option value="Inventory Staff">Inventory Staff</option>
+        </select>
       </div>
 
       {/* KPI Cards */}
@@ -182,21 +213,21 @@ export const StaffView = () => {
                   <td style={{ color: '#DC2626' }}>✕</td>
                 </tr>
                 <tr>
-                  <td>Collect Payment & Invoice</td>
+                  <td>Collect Payment &amp; Invoice</td>
                   <td style={{ color: '#16A34A', fontWeight: 'bold' }}>✓</td>
                   <td style={{ color: '#16A34A', fontWeight: 'bold' }}>✓</td>
                   <td style={{ color: '#DC2626' }}>✕</td>
                   <td style={{ color: '#DC2626' }}>✕</td>
                 </tr>
                 <tr>
-                  <td>Apply Discount & Edit Price</td>
+                  <td>Apply Discount &amp; Edit Price</td>
                   <td style={{ color: '#D97706' }}>Max 10%</td>
                   <td style={{ color: '#16A34A', fontWeight: 'bold' }}>✓ Unlimited</td>
                   <td style={{ color: '#DC2626' }}>✕</td>
                   <td style={{ color: '#DC2626' }}>✕</td>
                 </tr>
                 <tr>
-                  <td>Void Bill & Process Refund</td>
+                  <td>Void Bill &amp; Process Refund</td>
                   <td style={{ color: '#DC2626', fontWeight: 'bold' }}>✕ Restricted</td>
                   <td style={{ color: '#16A34A', fontWeight: 'bold' }}>✓ Authorized</td>
                   <td style={{ color: '#DC2626' }}>✕</td>
@@ -218,6 +249,9 @@ export const StaffView = () => {
           </div>
         </div>
       )}
+
+      {/* Add Staff Modal */}
+      <AddStaffModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
     </div>
   );
 };
