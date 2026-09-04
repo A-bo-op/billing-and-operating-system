@@ -127,10 +127,6 @@ export const OnlineDeliveryView = () => {
             <BellRing size={14} color="#FC8019" />
             <span>+ Simulate Swiggy</span>
           </button>
-
-          <button className="btn btn-primary btn-sm" onClick={() => setCurrentTab('pos')}>
-            <span>POS Counter</span>
-          </button>
         </div>
       </div>
 

@@ -14,6 +14,7 @@ export const DeliverySlipModal = ({ order, isOpen, onClose }) => {
   const isZomato = order.platform === 'zomato';
   const isSwiggy = order.platform === 'swiggy';
   const platformBrandColor = isZomato ? '#E23744' : isSwiggy ? '#FC8019' : '#3B82F6';
+  const platformName = isZomato ? 'Zomato' : isSwiggy ? 'Swiggy' : 'Direct Online';
 
   return (
     <div style={{
