@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import {
   INITIAL_RESTAURANT_INFO,
   INITIAL_TABLES,
@@ -15,6 +15,27 @@ import {
 } from '../data/demoData';
 
 const AppStateContext = createContext(null);
+
+export const playOrderBell = () => {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.6);
+  } catch (e) {
+    // Audio context may be restricted by browser policy before first gesture
+  }
+};
 
 export const AppStateProvider = ({ children }) => {
   // Navigation & Role State
@@ -98,9 +119,64 @@ export const AppStateProvider = ({ children }) => {
   }, [onlineOrders]);
 
   // ----------------------------------------------------
+  // REAL-TIME AUTO-SIMULATION & TIMERS
+  // ----------------------------------------------------
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Decrement prep time for orders in kitchen
+      setOnlineOrders(prev =>
+        prev.map(ord => {
+          if (ord.stage === 'preparing' && ord.prepTimeRemaining > 0) {
+            const nextTime = ord.prepTimeRemaining - 1;
+            return {
+              ...ord,
+              prepTimeRemaining: nextTime,
+              stage: nextTime === 0 ? 'ready' : 'preparing',
+              rider: ord.rider ? {
+                ...ord.rider,
+                status: nextTime <= 2 ? 'Rider Arrived & Waiting at Counter' : ord.rider.status
+              } : null
+            };
+          }
+          return ord;
+        })
+      );
+    }, 12000); // ticks every 12 seconds in demo mode
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // ----------------------------------------------------
   // ONLINE AGGREGATOR DELIVERY ACTIONS
   // ----------------------------------------------------
   const acceptOnlineOrder = (orderId, prepTimeMinutes = 20) => {
+    const targetOrder = onlineOrders.find(o => o.id === orderId);
+    if (!targetOrder) return;
+
+    // Automatic recipe ingredient stock deduction
+    targetOrder.items.forEach(orderItem => {
+      const matchedDish = dishes.find(d =>
+        orderItem.name.toLowerCase().includes(d.name.toLowerCase()) ||
+        d.name.toLowerCase().includes(orderItem.name.toLowerCase())
+      );
+      if (matchedDish && matchedDish.recipe) {
+        matchedDish.recipe.forEach(rec => {
+          setIngredients(ingPrev =>
+            ingPrev.map(ing => {
+              if (ing.id === rec.ingredientId) {
+                const reduction = rec.unit === 'g' || rec.unit === 'ml'
+                  ? (rec.quantity * orderItem.quantity) / 1000
+                  : rec.quantity * orderItem.quantity;
+                const newStock = Math.max(0, ing.stock - reduction);
+                return { ...ing, stock: parseFloat(newStock.toFixed(2)) };
+              }
+              return ing;
+            })
+          );
+        });
+      }
+    });
+
     setOnlineOrders(prev =>
       prev.map(ord => {
         if (ord.id !== orderId) return ord;
@@ -112,7 +188,7 @@ export const AppStateProvider = ({ children }) => {
           prepTimeRemaining: prepTimeMinutes,
           rider: ord.rider || {
             name: 'Rider Assigned (Connecting...)',
-            phone: '+91 98450 00000',
+            phone: '+91 98450 ' + Math.floor(10000 + Math.random() * 90000),
             vehicleNo: 'KA 03 EX ' + Math.floor(1000 + Math.random() * 9000),
             status: `Rider arriving in ${Math.floor(prepTimeMinutes / 2)} mins`,
             otp: Math.floor(1000 + Math.random() * 9000).toString(),
@@ -120,7 +196,7 @@ export const AppStateProvider = ({ children }) => {
         };
       })
     );
-    showToast(`Order ${orderId} accepted & sent to kitchen! (Prep: ${prepTimeMinutes}m)`, 'success');
+    showToast(`Order ${targetOrder.orderNo} accepted & sent to kitchen! (Prep: ${prepTimeMinutes}m)`, 'success');
   };
 
   const rejectOnlineOrder = (orderId, reason = 'Kitchen overload') => {
@@ -203,7 +279,7 @@ export const AppStateProvider = ({ children }) => {
     };
     setInvoices(invPrev => [newInvoice, ...invPrev]);
 
-    showToast(`Order ${orderId} marked Delivered & Settled!`, 'success');
+    showToast(`Order ${targetOrder.orderNo} marked Delivered & Settled!`, 'success');
   };
 
   const togglePlatformOnline = (platformId) => {
@@ -226,6 +302,65 @@ export const AppStateProvider = ({ children }) => {
         return { ...p, autoAccept: nextState };
       })
     );
+  };
+
+  // Simulate a live incoming order from Zomato / Swiggy
+  const simulateIncomingOrder = (platform = 'zomato') => {
+    playOrderBell();
+    const orderNum = Math.floor(1000 + Math.random() * 9000);
+    const prefix = platform === 'zomato' ? 'ZOM' : platform === 'swiggy' ? 'SWG' : 'DIR';
+    const orderId = `${prefix}-${orderNum}`;
+
+    const sampleCustomers = [
+      { name: 'Kavita Nair', phone: '+91 98450 77112', address: 'Apartment 204, Prestige Ozone, Whitefield', distance: '3.1 km', instructions: 'Less oily, provide extra cutlery' },
+      { name: 'Rohan Gupta', phone: '+91 97410 88234', address: 'Plot 45, 14th Main, HSR Layout Sector 3', distance: '1.8 km', instructions: 'Ring bell and keep on table outside' },
+      { name: 'Neha Rao', phone: '+91 99012 33451', address: 'Flat 5B, Skyline Manor, Koramangala 4th Block', distance: '2.2 km', instructions: 'Spicy level high please' },
+    ];
+
+    const customer = sampleCustomers[Math.floor(Math.random() * sampleCustomers.length)];
+    
+    // Pick 2 random dishes
+    const d1 = dishes[Math.floor(Math.random() * dishes.length)];
+    const d2 = dishes[Math.floor(Math.random() * dishes.length)];
+
+    const items = [
+      { id: `sim-${Date.now()}-1`, name: d1.name, quantity: 1, price: d1.price },
+      { id: `sim-${Date.now()}-2`, name: d2.name, quantity: 2, price: d2.price },
+    ];
+
+    const itemTotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const taxes = Math.round(itemTotal * 0.05);
+    const packingCharge = 25;
+    const discount = 30;
+    const totalBill = itemTotal + taxes + packingCharge - discount;
+    const commission = Math.round(itemTotal * (platform === 'zomato' ? 0.18 : platform === 'swiggy' ? 0.20 : 0));
+    const netPayout = totalBill - commission;
+
+    const newOnlineOrder = {
+      id: orderId,
+      platform: platform,
+      orderNo: `#${orderId}`,
+      stage: 'incoming',
+      customer: customer,
+      items: items,
+      itemTotal: itemTotal,
+      taxes: taxes,
+      deliveryFee: 35,
+      packingCharge: packingCharge,
+      discount: discount,
+      totalBill: totalBill,
+      commissionAmount: commission,
+      netPayout: netPayout,
+      paymentStatus: 'Paid Online (UPI)',
+      createdAt: 'Just now',
+      acceptedAt: null,
+      estimatedPrepTime: 20,
+      prepTimeRemaining: 20,
+      rider: null,
+    };
+
+    setOnlineOrders(prev => [newOnlineOrder, ...prev]);
+    showToast(`🔔 New ${platform.toUpperCase()} Order #${orderId} (₹${totalBill}) received!`, 'success');
   };
 
   // ----------------------------------------------------
@@ -772,6 +907,7 @@ export const AppStateProvider = ({ children }) => {
     completeOnlineOrder,
     togglePlatformOnline,
     toggleAutoAccept,
+    simulateIncomingOrder,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

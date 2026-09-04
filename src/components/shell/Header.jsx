@@ -9,6 +9,7 @@ export const Header = ({ onOpenRoleModal }) => {
     activeUserRole,
     aggregatorPlatforms,
     incomingOnlineOrdersCount,
+    currentTab,
     setCurrentTab
   } = useAppState();
   const [timeString, setTimeString] = useState('');
@@ -130,7 +131,7 @@ export const Header = ({ onOpenRoleModal }) => {
             </button>
           )}
 
-          {incomingOnlineOrdersCount > 0 && (
+          {incomingOnlineOrdersCount > 0 && currentTab !== 'online-orders' && (
             <button
               onClick={() => setCurrentTab('online-orders')}
               style={{

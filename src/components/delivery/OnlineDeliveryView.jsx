@@ -15,7 +15,9 @@ import {
   AlertCircle,
   Sparkles,
   Layers,
-  ArrowRight
+  ArrowRight,
+  PlusCircle,
+  BellRing
 } from 'lucide-react';
 import { useAppState } from '../../context/AppStateContext';
 import { OnlineOrderCard } from './OnlineOrderCard';
@@ -28,6 +30,8 @@ export const OnlineDeliveryView = () => {
     onlineOrders,
     togglePlatformOnline,
     toggleAutoAccept,
+    simulateIncomingOrder,
+    acceptOnlineOrder,
     setCurrentTab,
   } = useAppState();
 
@@ -39,7 +43,8 @@ export const OnlineDeliveryView = () => {
   const [orderForSlip, setOrderForSlip] = useState(null);
 
   // Counts by stage
-  const incomingCount = onlineOrders.filter(o => o.stage === 'incoming').length;
+  const incomingOrders = onlineOrders.filter(o => o.stage === 'incoming');
+  const incomingCount = incomingOrders.length;
   const preparingCount = onlineOrders.filter(o => o.stage === 'preparing').length;
   const readyCount = onlineOrders.filter(o => o.stage === 'ready').length;
   const dispatchedCount = onlineOrders.filter(o => o.stage === 'dispatched').length;
@@ -73,9 +78,9 @@ export const OnlineDeliveryView = () => {
     return true;
   });
 
-  const totalOnlineSalesToday = onlineOrders
-    .filter(o => o.stage === 'delivered')
-    .reduce((sum, o) => sum + o.totalBill, 0);
+  const handleAcceptAllIncoming = () => {
+    incomingOrders.forEach(o => acceptOnlineOrder(o.id, 20));
+  };
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: '1440px', margin: '0 auto' }} className="animate-fade-in">
@@ -93,23 +98,92 @@ export const OnlineDeliveryView = () => {
               borderRadius: '99px',
               border: '1px solid #FECACA'
             }}>
-              {allActiveCount} Active Online Orders
+              {allActiveCount} Active Orders
             </span>
           </div>
           <div style={{ fontSize: '13.5px', color: '#64748B', marginTop: '4px' }}>
-            Unified live hub for Zomato, Swiggy, and Direct store orders
+            Real-time live kitchen dispatch for Zomato, Swiggy & Direct Store orders
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => setCurrentTab('tables')}>
-            <span>Floor View</span>
+        {/* Live Simulation Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => simulateIncomingOrder('zomato')}
+            style={{ borderColor: '#FECACA', color: '#E23744', fontWeight: '700', backgroundColor: '#FEF2F2' }}
+            title="Simulate a real incoming customer order from Zomato"
+          >
+            <BellRing size={14} color="#E23744" />
+            <span>+ Simulate Zomato</span>
           </button>
+
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => simulateIncomingOrder('swiggy')}
+            style={{ borderColor: '#FED7AA', color: '#FC8019', fontWeight: '700', backgroundColor: '#FFF7ED' }}
+            title="Simulate a real incoming customer order from Swiggy"
+          >
+            <BellRing size={14} color="#FC8019" />
+            <span>+ Simulate Swiggy</span>
+          </button>
+
           <button className="btn btn-primary btn-sm" onClick={() => setCurrentTab('pos')}>
-            <span>New POS Order</span>
+            <span>POS Counter</span>
           </button>
         </div>
       </div>
+
+      {/* Incoming Orders Attention Banner */}
+      {incomingCount > 0 && (
+        <div style={{
+          backgroundColor: '#FEF2F2',
+          border: '1.5px solid #FECACA',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 4px 14px rgba(225, 29, 72, 0.12)'
+        }} className="animate-slide-up">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              backgroundColor: '#E11D48',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(225, 29, 72, 0.35)',
+              animation: 'pulseGlow 1.5s infinite'
+            }}>
+              <BellRing size={20} />
+            </div>
+
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#9F1239' }}>
+                {incomingCount} New Incoming Online Order{incomingCount > 1 ? 's' : ''} Awaiting Kitchen Acceptance!
+              </div>
+              <div style={{ fontSize: '12.5px', color: '#E11D48', marginTop: '2px' }}>
+                Accepting will automatically generate kitchen KOT and deduct ingredient stock.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              className="btn btn-success btn-sm"
+              onClick={handleAcceptAllIncoming}
+              style={{ height: '36px', padding: '0 16px', fontWeight: '800' }}
+            >
+              <CheckCircle2 size={16} /> Accept All Incoming ({incomingCount})
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Platform Integration Status Bar */}
       <div style={{
@@ -119,9 +193,6 @@ export const OnlineDeliveryView = () => {
         marginBottom: '24px'
       }}>
         {aggregatorPlatforms.map((platform) => {
-          const isZomato = platform.id === 'zomato';
-          const isSwiggy = platform.id === 'swiggy';
-
           return (
             <div
               key={platform.id}
@@ -330,8 +401,16 @@ export const OnlineDeliveryView = () => {
         }}>
           <Bike size={44} color="#CBD5E1" style={{ margin: '0 auto 12px auto', display: 'block' }} />
           <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>No online orders in this stage</div>
-          <div style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
-            New incoming orders from Zomato and Swiggy will automatically chime and appear here.
+          <div style={{ fontSize: '13px', color: '#64748B', marginTop: '4px', marginBottom: '16px' }}>
+            Click the buttons above to simulate real incoming orders from Zomato or Swiggy.
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => simulateIncomingOrder('zomato')}>
+              + Simulate Zomato Order
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => simulateIncomingOrder('swiggy')}>
+              + Simulate Swiggy Order
+            </button>
           </div>
         </div>
       ) : (
