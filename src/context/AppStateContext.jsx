@@ -10,13 +10,15 @@ import {
   INITIAL_SUPPLIERS,
   INITIAL_PURCHASES,
   STOCK_AUDIT_LOGS,
+  INITIAL_AGGREGATOR_PLATFORMS,
+  INITIAL_ONLINE_ORDERS,
 } from '../data/demoData';
 
 const AppStateContext = createContext(null);
 
 export const AppStateProvider = ({ children }) => {
   // Navigation & Role State
-  const [currentTab, setCurrentTab] = useState('tables'); // tables | pos | menu | inventory | purchases | invoices | dashboard | staff | reports
+  const [currentTab, setCurrentTab] = useState('tables'); // tables | pos | online-orders | menu | inventory | purchases | invoices | dashboard | staff | reports
   const [activeUserRole, setActiveUserRole] = useState('Cashier'); // Cashier | Manager | Owner | Head Chef | Inventory Staff
   const [activeUser, setActiveUser] = useState({ name: 'Divya Suresh', avatar: 'DS', role: 'Cashier' });
 
@@ -32,6 +34,10 @@ export const AppStateProvider = ({ children }) => {
   const [purchases, setPurchases] = useState(INITIAL_PURCHASES);
   const [stockLogs, setStockLogs] = useState(STOCK_AUDIT_LOGS);
 
+  // Online Aggregators & Delivery State
+  const [aggregatorPlatforms, setAggregatorPlatforms] = useState(INITIAL_AGGREGATOR_PLATFORMS);
+  const [onlineOrders, setOnlineOrders] = useState(INITIAL_ONLINE_ORDERS);
+
   // Active POS / Working State
   const [activeTableId, setActiveTableId] = useState('T1');
   const [activeOrderId, setActiveOrderId] = useState('ORD-101');
@@ -39,6 +45,7 @@ export const AppStateProvider = ({ children }) => {
   // Modals & Drawers
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [printedInvoice, setPrintedInvoice] = useState(null); // for thermal receipt print modal
+  const [printedDeliverySlip, setPrintedDeliverySlip] = useState(null); // for delivery KOT / bill slip
   const [toast, setToast] = useState(null); // { message, type: 'success'|'error'|'info'|'warning' }
 
   // Quick Toast Helper
@@ -62,23 +69,167 @@ export const AppStateProvider = ({ children }) => {
     return tables.find(t => t.id === activeTableId) || null;
   }, [tables, activeTableId]);
 
-  // Today's Sales Calculation
+  // Today's Sales Calculation (Includes Dine-in/POS + Delivered Online Orders)
   const todaysSales = useMemo(() => {
-    return invoices
+    const invoiceTotal = invoices
       .filter(inv => inv.status === 'Paid')
       .reduce((sum, inv) => sum + inv.total, 0);
-  }, [invoices]);
+
+    const onlineDeliveredTotal = onlineOrders
+      .filter(o => o.stage === 'delivered')
+      .reduce((sum, o) => sum + o.totalBill, 0);
+
+    return invoiceTotal + onlineDeliveredTotal;
+  }, [invoices, onlineOrders]);
 
   const todaysBilledCount = useMemo(() => {
-    return invoices.filter(inv => inv.status === 'Paid').length;
-  }, [invoices]);
+    const paidInvoices = invoices.filter(inv => inv.status === 'Paid').length;
+    const onlineDelivered = onlineOrders.filter(o => o.stage === 'delivered').length;
+    return paidInvoices + onlineDelivered;
+  }, [invoices, onlineOrders]);
 
   const staffOnDutyCount = useMemo(() => {
     return staffList.filter(s => s.status === 'On duty').length;
   }, [staffList]);
 
+  // Incoming Online Orders Count (for attention badges)
+  const incomingOnlineOrdersCount = useMemo(() => {
+    return onlineOrders.filter(o => o.stage === 'incoming').length;
+  }, [onlineOrders]);
+
   // ----------------------------------------------------
-  // TABLE & ORDER ACTIONS
+  // ONLINE AGGREGATOR DELIVERY ACTIONS
+  // ----------------------------------------------------
+  const acceptOnlineOrder = (orderId, prepTimeMinutes = 20) => {
+    setOnlineOrders(prev =>
+      prev.map(ord => {
+        if (ord.id !== orderId) return ord;
+        return {
+          ...ord,
+          stage: 'preparing',
+          acceptedAt: 'Just now',
+          estimatedPrepTime: prepTimeMinutes,
+          prepTimeRemaining: prepTimeMinutes,
+          rider: ord.rider || {
+            name: 'Rider Assigned (Connecting...)',
+            phone: '+91 98450 00000',
+            vehicleNo: 'KA 03 EX ' + Math.floor(1000 + Math.random() * 9000),
+            status: `Rider arriving in ${Math.floor(prepTimeMinutes / 2)} mins`,
+            otp: Math.floor(1000 + Math.random() * 9000).toString(),
+          }
+        };
+      })
+    );
+    showToast(`Order ${orderId} accepted & sent to kitchen! (Prep: ${prepTimeMinutes}m)`, 'success');
+  };
+
+  const rejectOnlineOrder = (orderId, reason = 'Kitchen overload') => {
+    setOnlineOrders(prev =>
+      prev.map(ord => {
+        if (ord.id !== orderId) return ord;
+        return { ...ord, stage: 'cancelled', cancelReason: reason };
+      })
+    );
+    showToast(`Order ${orderId} rejected: ${reason}`, 'warning');
+  };
+
+  const markOnlineOrderReady = (orderId) => {
+    setOnlineOrders(prev =>
+      prev.map(ord => {
+        if (ord.id !== orderId) return ord;
+        return {
+          ...ord,
+          stage: 'ready',
+          prepTimeRemaining: 0,
+          rider: ord.rider ? {
+            ...ord.rider,
+            status: 'Rider Arrived & Waiting at Counter'
+          } : null
+        };
+      })
+    );
+    showToast(`Order ${orderId} packed & marked Ready for Pickup!`, 'success');
+  };
+
+  const dispatchOnlineOrder = (orderId) => {
+    setOnlineOrders(prev =>
+      prev.map(ord => {
+        if (ord.id !== orderId) return ord;
+        return {
+          ...ord,
+          stage: 'dispatched',
+          rider: ord.rider ? {
+            ...ord.rider,
+            status: 'Out for delivery to customer'
+          } : null
+        };
+      })
+    );
+    showToast(`Order ${orderId} handed over to delivery rider!`, 'success');
+  };
+
+  const completeOnlineOrder = (orderId) => {
+    const targetOrder = onlineOrders.find(o => o.id === orderId);
+    if (!targetOrder) return;
+
+    setOnlineOrders(prev =>
+      prev.map(ord => {
+        if (ord.id !== orderId) return ord;
+        return { ...ord, stage: 'delivered', deliveredAt: 'Just now' };
+      })
+    );
+
+    // Also record into invoices for complete audit
+    const invNo = `INV-${targetOrder.platform.toUpperCase().slice(0, 3)}-${Date.now().toString().slice(-4)}`;
+    const newInvoice = {
+      id: invNo,
+      orderId: targetOrder.id,
+      invoiceNo: invNo,
+      date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      orderType: `Online (${targetOrder.platform.toUpperCase()})`,
+      tableOrCustomer: `${targetOrder.customer.name} (${targetOrder.platform.toUpperCase()})`,
+      cashier: 'Aggregator API',
+      paymentMethod: targetOrder.paymentStatus,
+      referenceNo: targetOrder.orderNo,
+      amountReceived: targetOrder.totalBill,
+      changeGiven: 0,
+      items: targetOrder.items.map(i => ({ name: i.name, quantity: i.quantity, rate: i.price, amount: i.price * i.quantity })),
+      subtotal: targetOrder.itemTotal,
+      discount: targetOrder.discount,
+      tax: targetOrder.taxes,
+      total: targetOrder.totalBill,
+      status: 'Paid',
+    };
+    setInvoices(invPrev => [newInvoice, ...invPrev]);
+
+    showToast(`Order ${orderId} marked Delivered & Settled!`, 'success');
+  };
+
+  const togglePlatformOnline = (platformId) => {
+    setAggregatorPlatforms(prev =>
+      prev.map(p => {
+        if (p.id !== platformId) return p;
+        const nextState = !p.isOnline;
+        showToast(`${p.name} store is now ${nextState ? 'ONLINE' : 'OFFLINE'}`, nextState ? 'success' : 'warning');
+        return { ...p, isOnline: nextState };
+      })
+    );
+  };
+
+  const toggleAutoAccept = (platformId) => {
+    setAggregatorPlatforms(prev =>
+      prev.map(p => {
+        if (p.id !== platformId) return p;
+        const nextState = !p.autoAccept;
+        showToast(`Auto-accept for ${p.name} turned ${nextState ? 'ON' : 'OFF'}`, 'info');
+        return { ...p, autoAccept: nextState };
+      })
+    );
+  };
+
+  // ----------------------------------------------------
+  // TABLE & DINE-IN ORDER ACTIONS
   // ----------------------------------------------------
   const openTableOrder = (tableId) => {
     setActiveTableId(tableId);
@@ -87,7 +238,6 @@ export const AppStateProvider = ({ children }) => {
     if (existingTable && existingTable.orderId) {
       setActiveOrderId(existingTable.orderId);
     } else {
-      // Create new draft order for this table
       const newOrdId = `ORD-${Date.now().toString().slice(-4)}`;
       const newOrder = {
         id: newOrdId,
@@ -235,7 +385,6 @@ export const AppStateProvider = ({ children }) => {
           .map(item => {
             if (item.id !== itemId) return item;
 
-            // Operational Safety Rule: Sent items cannot have quantity reduced below 1 without cancellation flow
             if (item.kotState === 'sent' && item.quantity + delta < 1) {
               showToast('Sent items must be cancelled with a reason', 'warning');
               return item;
@@ -296,7 +445,6 @@ export const AppStateProvider = ({ children }) => {
       })
     );
 
-    // Update table pending KOT status
     if (activeOrder.tableId) {
       setTables(prev =>
         prev.map(t => (t.id === activeOrder.tableId ? { ...t, pendingKot: false } : t))
@@ -312,7 +460,6 @@ export const AppStateProvider = ({ children }) => {
             setIngredients(ingPrev =>
               ingPrev.map(ing => {
                 if (ing.id === rec.ingredientId) {
-                  // convert recipe unit to base ingredient stock unit if needed
                   const reductionInKgOrL = rec.unit === 'g' || rec.unit === 'ml' ? (rec.quantity * orderItem.quantity) / 1000 : rec.quantity * orderItem.quantity;
                   const newStock = Math.max(0, ing.stock - reductionInKgOrL);
                   return { ...ing, stock: parseFloat(newStock.toFixed(2)) };
@@ -356,14 +503,12 @@ export const AppStateProvider = ({ children }) => {
 
     setInvoices(prev => [newInvoice, ...prev]);
 
-    // Close table if dine-in
     if (activeOrder.tableId) {
       setTables(prev =>
         prev.map(t => (t.id === activeOrder.tableId ? { ...t, status: 'free', orderId: null, elapsedMinutes: 0 } : t))
       );
     }
 
-    // Close order
     setOrders(prev => prev.filter(o => o.id !== activeOrder.id));
     setIsPaymentModalOpen(false);
     setPrintedInvoice(newInvoice);
@@ -433,7 +578,6 @@ export const AppStateProvider = ({ children }) => {
       return;
     }
 
-    // Increase stock for each purchase line item
     targetPurchase.items.forEach(item => {
       setIngredients(prev =>
         prev.map(ing => {
@@ -591,10 +735,15 @@ export const AppStateProvider = ({ children }) => {
     suppliers,
     purchases,
     stockLogs,
+    aggregatorPlatforms,
+    onlineOrders,
+    incomingOnlineOrdersCount,
     isPaymentModalOpen,
     setIsPaymentModalOpen,
     printedInvoice,
     setPrintedInvoice,
+    printedDeliverySlip,
+    setPrintedDeliverySlip,
     toast,
     showToast,
     openTableOrder,
@@ -616,6 +765,13 @@ export const AppStateProvider = ({ children }) => {
     addStaff,
     toggleStaffDuty,
     voidInvoice,
+    acceptOnlineOrder,
+    rejectOnlineOrder,
+    markOnlineOrderReady,
+    dispatchOnlineOrder,
+    completeOnlineOrder,
+    togglePlatformOnline,
+    toggleAutoAccept,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

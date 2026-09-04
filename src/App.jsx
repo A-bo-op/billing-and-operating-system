@@ -7,6 +7,7 @@ import { Toast } from './components/common/Toast';
 
 import { FloorView } from './components/floor/FloorView';
 import { PosView } from './components/pos/PosView';
+import { OnlineDeliveryView } from './components/delivery/OnlineDeliveryView';
 import { MenuView } from './components/menu/MenuView';
 import { InventoryView } from './components/inventory/InventoryView';
 import { PurchasesView } from './components/purchases/PurchasesView';
@@ -29,6 +30,8 @@ const MainLayout = () => {
         return <FloorView />;
       case 'pos':
         return <PosView />;
+      case 'online-orders':
+        return <OnlineDeliveryView />;
       case 'menu':
         return <MenuView />;
       case 'inventory':

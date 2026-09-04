@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LayoutGrid,
   ShoppingCart,
+  Bike,
   UtensilsCrossed,
   Package,
   Truck,
@@ -15,7 +16,7 @@ import {
 import { useAppState } from '../../context/AppStateContext';
 
 export const Sidebar = () => {
-  const { currentTab, setCurrentTab, lowStockIngredients, tables } = useAppState();
+  const { currentTab, setCurrentTab, lowStockIngredients, tables, incomingOnlineOrdersCount } = useAppState();
 
   // Calculate table attention count
   const tableAttentionCount = tables.filter(t => t.status === 'occupied' && t.pendingKot).length;
@@ -24,6 +25,7 @@ export const Sidebar = () => {
   const navItems = [
     { id: 'tables', label: 'Tables & Floor', icon: LayoutGrid, badge: tableAttentionCount > 0 ? tableAttentionCount : null, badgeColor: 'amber' },
     { id: 'pos', label: 'Point of Sale', icon: ShoppingCart },
+    { id: 'online-orders', label: 'Online Deliveries', icon: Bike, badge: incomingOnlineOrdersCount > 0 ? incomingOnlineOrdersCount : null, badgeColor: 'red' },
     { id: 'menu', label: 'Menu & Recipes', icon: UtensilsCrossed },
     { id: 'inventory', label: 'Inventory', icon: Package, badge: lowStockCount > 0 ? lowStockCount : null, badgeColor: 'red' },
     { id: 'purchases', label: 'Purchases (GRN)', icon: Truck },
